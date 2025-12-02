@@ -1,5 +1,29 @@
 #!/usr/bin/env bash
 
+list_env_vars() {
+  env | awk -F= '{print $1}' | paste -sd,
+}
+
+run_with_sudo() {
+  local preserve_all_env=1
+  local SAVE_LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}"
+
+  if [ "$1" = "no_preserve_env" ]; then
+    preserve_all_env=0
+    shift
+  fi
+
+  if [ $preserve_all_env -eq 1 ]; then
+    sudo --preserve-env="$(list_env_vars)" "$@"
+  else
+    sudo \
+      PATH="${PATH}" \
+      LD_LIBRARY_PATH="${SAVE_LD_LIBRARY_PATH}" \
+      PYTHONPATH="${PYTHONPATH:-}" \
+      "$@"
+  fi
+}
+
 # shellcheck disable=SC2155
 # shellcheck disable=SC1091
 
@@ -434,7 +458,7 @@ function clashctl() {
         ;;
     tun)
         shift
-        clashtun "$@"
+        run_with_sudo "$SHELL" -c "source $SCRIPT_DIR/clashctl.sh;clashtun "$@""
         ;;
     mixin)
         shift
